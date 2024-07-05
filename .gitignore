@@ -1,0 +1,14 @@
+# ignore statistics
+*.xlsx
+
+# ignore checkpoints saved
+checkpoints/
+
+#ignore code Counter
+.VSCodeCounter/
+
+# ignore Data
+data/
+
+# ignore python cache
+__pycache__/
