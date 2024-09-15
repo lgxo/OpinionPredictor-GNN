@@ -1,4 +1,4 @@
-from utils._utils import setup_seed, get_StartTime, get_timeUsed
+from utils._utils import setup_seed, get_StartTime, get_timeUsed, read_json
 from utils.myMethod.myMethod_utils import *
 import os
 from models.myGraph_gcn import myGraph_gcn
@@ -7,9 +7,10 @@ import evaluate
 from itertools import product
 import pandas as pd
 import torch.nn.functional as F
+import json
 
 
-def myModel_trainer(config, random_seed=2024):
+def myModel_trainer(model, config, random_seed=2024):
     setup_seed(random_seed)
 
     train_dataset = load_dataset4myMethod("train", **config)
@@ -83,79 +84,76 @@ def myModel_trainer(config, random_seed=2024):
     #     print(info)
 
 
-def collation():
-    pass
+def grid_search():
+    config = {
+        "channel": None,
+        "interval": (4, 15),
+        "top_k": 1,
+        "threshold": 0.5,
+        "offset": None,
+        "metric_path": "utils/baseline/KLD.py",
+        "checkpoint_root_dir": "checkpoints/myMethod/"
+    }
+    channel_lst = ["cj", "ty"]
+    model_name_lst = ["myGraph_gcn", "myGraph_gat"]
+    layer_num_lst = [2, 3, 4]
+    readout_layer_lst = ["global_mean_pool", "global_max_pool"]
+    is_selfloops_lst = [True, False]
+    is_edge_attr_lst = [True, False]
+    # dropout_lst = [0, 0.1, 0.3, 0.5, 0.9]
 
-
-if __name__ == '__main__':
-    # config = {
-    #     "channel": None,
-    #     "interval": (4, 15),
-    #     "top_k": 1,
-    #     "threshold": 0.5,
-    #     "offset": None,
-    #     "metric_path": "utils/baseline/KLD.py",
-    #     "checkpoint_root_dir": "checkpoints/myMethod/"
-    # }
-    # channel_lst = ["cj", "ty"]
-    # model_name_lst = ["myGraph_gcn", "myGraph_gat"]
-    # layer_num_lst = [2, 3, 4]
-    # readout_layer_lst = ["global_mean_pool", "global_max_pool"]
-    # is_selfloops_lst = [True, False]
-    # is_edge_attr_lst = [True, False]
-    # # dropout_lst = [0, 0.1, 0.3, 0.5, 0.9]
-
-    # print("="*50)
-    # df_data = []
-    # start_time = get_StartTime()
-    # for channel, model_name, layer_num, readout_layer, is_selfloops, is_edge_attr in product(
-    #     channel_lst, model_name_lst, layer_num_lst, readout_layer_lst, is_selfloops_lst, is_edge_attr_lst
-    # ):
-    #     dropout = 0.3
-    #     print("Args:")
-    #     print(f"channel: {channel}, model_name: {model_name}, layer_num: {layer_num}, readout_layer: {readout_layer}, is_selfloops: {is_selfloops}, is_edge_attr: {is_edge_attr}, dropout: {dropout}")
-    #     if model_name == "myGraph_gcn":
-    #         model = myGraph_gcn(300, 128, 6, layer_num, readout_layer, is_selfloops, is_edge_attr, dropout).to("cuda:0")
-    #     elif model_name == "myGraph_gat":
-    #         model = myGraph_gat(300, 128, 6, layer_num, readout_layer, is_selfloops, is_edge_attr, dropout).to("cuda:0")
-    #     else:
-    #         raise ValueError("Invalid model name")
+    print("="*50)
+    df_data = []
+    start_time = get_StartTime()
+    for channel, model_name, layer_num, readout_layer, is_selfloops, is_edge_attr in product(
+        channel_lst, model_name_lst, layer_num_lst, readout_layer_lst, is_selfloops_lst, is_edge_attr_lst
+    ):
+        dropout = 0.3
+        print("Args:")
+        print(f"channel: {channel}, model_name: {model_name}, layer_num: {layer_num}, readout_layer: {readout_layer}, is_selfloops: {is_selfloops}, is_edge_attr: {is_edge_attr}, dropout: {dropout}")
+        if model_name == "myGraph_gcn":
+            model = myGraph_gcn(300, 128, 6, layer_num, readout_layer, is_selfloops, is_edge_attr, dropout).to("cuda:0")
+        elif model_name == "myGraph_gat":
+            model = myGraph_gat(300, 128, 6, layer_num, readout_layer, is_selfloops, is_edge_attr, dropout).to("cuda:0")
+        else:
+            raise ValueError("Invalid model name")
         
-    #     config["channel"] = channel
+        config["channel"] = channel
         
-    #     local_data = {
-    #         "channel": channel,
-    #         "model_name": model_name,
-    #         "layer_num": layer_num,
-    #         "readout_layer": readout_layer,
-    #         "is_selfloops": is_selfloops,
-    #         "is_edge_attr": is_edge_attr,
-    #         "dropout": dropout,
-    #     }
-    #     for i in range(3):
-    #         eval_kld, test_kld = myModel_trainer(config, random_seed=2024)
-    #         local_data[f"eval_kld_{i+1}"] = eval_kld
-    #         local_data[f"test_kld_{i+1}"] = test_kld
-    #     local_data["avg_eval_kld"] = sum([local_data[f"eval_kld_{i+1}"] for i in range(3)])/3
-    #     local_data["avg_test_kld"] = sum([local_data[f"test_kld_{i+1}"] for i in range(3)])/3
-    #     for i in range(3):
-    #         print(f"eval_kld_{i+1}: {local_data[f'eval_kld_{i+1}']}, test_kld_{i+1}: {local_data[f'test_kld_{i+1}']}")
-    #     print(f"avg_eval_kld: {local_data['avg_eval_kld']}, avg_test_kld: {local_data['avg_test_kld']}")
-    #     df_data.append(local_data)
+        local_data = {
+            "channel": channel,
+            "model_name": model_name,
+            "layer_num": layer_num,
+            "readout_layer": readout_layer,
+            "is_selfloops": is_selfloops,
+            "is_edge_attr": is_edge_attr,
+            "dropout": dropout,
+        }
+        for i in range(3):
+            eval_kld, test_kld = myModel_trainer(model, config, random_seed=2024)
+            local_data[f"eval_kld_{i+1}"] = eval_kld
+            local_data[f"test_kld_{i+1}"] = test_kld
+        local_data["avg_eval_kld"] = sum([local_data[f"eval_kld_{i+1}"] for i in range(3)])/3
+        local_data["avg_test_kld"] = sum([local_data[f"test_kld_{i+1}"] for i in range(3)])/3
+        for i in range(3):
+            print(f"eval_kld_{i+1}: {local_data[f'eval_kld_{i+1}']}, test_kld_{i+1}: {local_data[f'test_kld_{i+1}']}")
+        print(f"avg_eval_kld: {local_data['avg_eval_kld']}, avg_test_kld: {local_data['avg_test_kld']}")
+        df_data.append(local_data)
 
-    #     print(f"Time used: {get_timeUsed(start_time)} s")
-    #     print("\n"*3)
-    #     print("="*50)
+        print(f"Time used: {get_timeUsed(start_time)} s")
+        print("\n"*3)
+        print("="*50)
 
     
-    # df = pd.DataFrame(df_data)
-    # # df.to_csv("myMethod_result.csv", index=False)
-    # with pd.ExcelWriter("myMethod_result1.xlsx", mode="w") as writer:
-    #     df.to_excel(writer, sheet_name=f"drop{dropout}", index=True)   
-    # print(df)
-    # print("Write result to myMethod_result.xlsx")
+    df = pd.DataFrame(df_data)
+    # df.to_csv("myMethod_result.csv", index=False)
+    with pd.ExcelWriter("myMethod_result1.xlsx", mode="w") as writer:
+        df.to_excel(writer, sheet_name=f"drop{dropout}", index=True)   
+    print(df)
+    print("Write result to myMethod_result.xlsx")
 
 
+def gain_accuracy(channel):
     best_model_args = {
         "cj":{
             "model_name": "myGraph_gcn",
@@ -196,9 +194,10 @@ if __name__ == '__main__':
             "best_ckpt_path": "checkpoints/myMethod/myGraph_gat/ty/interval(4-15)/top1-0.5/best/checkpoint-1300.ckpt"
         }
     }
-    channel = "cj"
-    # args = best_model_args[channel]
-    args = gat_model_args[channel]
+    # channel = "cj"
+    args = best_model_args[channel]
+    # args = gat_model_args[channel]
+
     model_name = args.pop("model_name")
     best_ckpt_path = args.pop("best_ckpt_path")
     if model_name == "myGraph_gcn":
@@ -217,7 +216,7 @@ if __name__ == '__main__':
         "metric_path": "utils/baseline/KLD.py",
         "checkpoint_root_dir": "checkpoints/myMethod/"
     }
-    # eval_kld, test_kld = myModel_trainer(config, random_seed=2024)
+    # eval_kld, test_kld = myModel_trainer(model, config, random_seed=2024)
     # print(f"eval_kld: {eval_kld}, test_kld: {test_kld}")
 
 
@@ -232,6 +231,7 @@ if __name__ == '__main__':
     predictions_lst = []
     references_lst = []
     model.eval()
+    t_lst = []
     for inputs in tqdm(dataloader):
         with torch.no_grad():
             labels = inputs.pop("labels")
@@ -246,22 +246,156 @@ if __name__ == '__main__':
             predictions = F.log_softmax(logits, dim=-1)
             kl_loss = F.kl_div(predictions, labels, reduction="batchmean")
             kld_lst.append(kl_loss.item())
+            t_lst.append(logits.argmax(dim=-1).item())
             if logits.argmax(dim=-1).item() == labels.argmax(dim=-1).item():
                 acc += 1
     
     acc = acc/len(test_dataset)
+    print(max(t_lst), min(t_lst))
+    from collections import Counter
+    print(Counter(t_lst))
 
-    # top_num = 10
+    # top_num = 20
     # top_lst = sorted(enumerate(kld_lst), key=lambda e: e[1])[:top_num]
-    print("acc:", acc)
+    # print("acc:", acc)
     # print(top_lst)
+
+    # test_samples = read_json(os.path.join("data/baseline/min-4", f"{channel}_test.json"))
+    # origin_data_news = {js.pop("news_id"):js for js in read_json(os.path.join("data/corpus/divided/", f"{channel}.json"))}
+    # origin_data_label = {js.pop("news_id"):js for js in read_json(os.path.join("data/corpus/preprocessed/", f"{channel}.json"))}
+
+    # # for index, kld in top_lst:
+    # #     print(references_lst[index])
+    # #     print(predictions_lst[index])
+    # #     print(f"kld: {kld}")
+    # #     print()
+    # # pass
+
+    # # Case study
+    # data_top_lst = []
     # for index, kld in top_lst:
-    #     print(references_lst[index])
-    #     print(predictions_lst[index])
-    #     print(f"kld: {kld}")
-    #     print()
+    #     news_id = test_samples[index]["news_id"]
+    #     data_top_lst.append({
+    #         "title": origin_data_news[news_id]["title"],
+    #         "news": origin_data_news[news_id]["news_text"].split("\n"),
+    #         "label": origin_data_label[news_id]["label"],
+    #         "kld": kld,
+    #         "references": references_lst[index].tolist()[0],
+    #         "predictions": predictions_lst[index].tolist()[0],
+    #         "news_id": news_id,
+    #         "comments": origin_data_news[news_id]["comment_text"]
+    #     })
+    # with open(os.path.join("data/materials/casestudy", f"{channel}_top.json"), "w", encoding="utf-8") as f:
+    #     json.dump(data_top_lst, f, ensure_ascii=False, indent=4)
+    # print("Write result to data/materials/casestudy")
 
 
+def robustness_test(**kwarg):
+    best_model_args = {
+        "cj":{
+            "model_name": "myGraph_gcn",
+            "layers": 2,
+            "readout_type": "global_mean_pool",
+            "is_selfloop": True,
+            "is_edge_attr": False,
+            "dropout": 0.3,
+        },
+        "ty":{
+            "model_name": "myGraph_gcn",
+            "layers": 2,
+            "readout_type": "global_mean_pool",
+            "is_selfloop": True,
+            "is_edge_attr": True,
+            "dropout": 0.1,
+        }
+    }
 
+    if kwarg:
+        channel = kwarg.get("channel")
 
+        args = best_model_args[channel]
+        model_name = args.pop("model_name")
+
+        offset = kwarg.get("offset")
+        if model_name == "myGraph_gcn":
+            model = myGraph_gcn(300, 128, 6, **args).to("cuda:0")
+        elif model_name == "myGraph_gat":
+            model = myGraph_gat(300, 128, 6, **args).to("cuda:0")
+        else:
+            raise ValueError("Invalid model name")
         
+        config = {
+            "channel": channel,
+            "interval": (4, 15),
+            "top_k": 1,
+            "threshold": 0.5,
+            "offset": offset,
+            "metric_path": "utils/baseline/KLD.py",
+            "checkpoint_root_dir": "checkpoints/myMethod/"
+        }
+
+        eval_kld, test_kld = myModel_trainer(model, config, random_seed=644)
+        print(f"eval_kld: {eval_kld}, test_kld: {test_kld}")
+        
+
+    else:
+        df_data = []
+
+        start_time = get_StartTime()
+        for channel in ["cj", "ty"]:
+            local_data_base = {
+                "channel": channel,
+            }
+            args = best_model_args[channel]
+            model_name = args.pop("model_name")
+
+            for offset in [-2, -1, 0, 1, 2]:
+                local_data = local_data_base.copy()
+                local_data["offset"] = offset
+                
+                if model_name == "myGraph_gcn":
+                    model = myGraph_gcn(300, 128, 6, **args).to("cuda:0")
+                elif model_name == "myGraph_gat":
+                    model = myGraph_gat(300, 128, 6, **args).to("cuda:0")
+                else:
+                    raise ValueError("Invalid model name")
+                
+                config = {
+                    "channel": channel,
+                    "interval": (4, 15),
+                    "top_k": 1,
+                    "threshold": 0.5,
+                    "offset": offset,
+                    "metric_path": "utils/baseline/KLD.py",
+                    "checkpoint_root_dir": "checkpoints/myMethod/"
+                }
+
+                for i in range(3):
+                    eval_kld, test_kld = myModel_trainer(model, config, random_seed=2024)
+                    print(f"eval_kld_{i+1}: {eval_kld}, test_kld_{i+1}: {test_kld}")
+                    local_data[f"eval_kld_{i+1}"] = eval_kld
+                    local_data[f"test_kld_{i+1}"] = test_kld
+                local_data["avg_eval_kld"] = sum([local_data[f"eval_kld_{i+1}"] for i in range(3)])/3
+                local_data["avg_test_kld"] = sum([local_data[f"test_kld_{i+1}"] for i in range(3)])/3
+                print()
+                print(f"channel: {channel}, offset: {offset}")
+                print(f"avg_eval_kld: {local_data['avg_eval_kld']}, avg_test_kld: {local_data['avg_test_kld']}")
+                print("Time used: ", get_timeUsed(start_time))
+                print("\n")
+
+                df_data.append(local_data)
+
+        df = pd.DataFrame(df_data)
+        with pd.ExcelWriter("robustness_result.xlsx", mode="w") as writer:
+            df.to_excel(writer, sheet_name=f"robustness", index=True)   
+        print(df)
+        print("Write result to robustness_result.xlsx")
+
+
+if __name__ == '__main__':
+    # grid_search()
+    gain_accuracy(channel="cj")
+    # robustness_test(**{
+    #     "channel": "ty",
+    #     "offset": -2
+    # })

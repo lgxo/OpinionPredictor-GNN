@@ -179,7 +179,13 @@ baseline_lst = [
     Baseline(
         model_name_or_path='SamLowe/roberta-base-go_emotions',
         checkpoints_dir='roberta-base-go_emotions',
-        reference_urls = None
+        reference_urls = None,
+        **{
+            "args_TrainingArguments":{
+                "learning_rate": 5e-4,
+                "weight_decay":0.1
+            }
+        }
     ),
     # 8
     Baseline(
@@ -197,6 +203,8 @@ baseline_lst = [
             "args_TrainingArguments":{
                 "per_device_train_batch_size": 12,
                 "per_device_eval_batch_size": 12,
+                "learning_rate": 5e-4,
+                "weight_decay":0.1
             }
         }
     ),
@@ -210,16 +218,23 @@ baseline_lst = [
     Baseline(
         model_name_or_path='KernAI/stock-news-distilbert',
         checkpoints_dir='stock-news-distilbert',
-        reference_urls = None
+        reference_urls = None,
+        **{
+            "args_TrainingArguments":{
+                "learning_rate": 5e-4,
+                "weight_decay":0.1
+            }
+        }
     ),
-    # # 11
+    
     # # Use `from_tf=True` to load this model from those weights.
     # Baseline(
     #     model_name_or_path='Yueh-Huan/news-category-classification-distilbert',
     #     checkpoints_dir='news-category-classification-distilbert',
     #     reference_urls = None
     # ),
-    # 12
+
+    # 11
     Baseline(
         model_name_or_path='mrm8488/deberta-v3-ft-financial-news-sentiment-analysis',
         checkpoints_dir='deberta-v3-ft-financial-news-sentiment-analysis',
@@ -232,9 +247,13 @@ baseline_lst = [
                 "truncation":True,
                 "return_tensors":"pt",
             },
+            "args_TrainingArguments":{
+                "learning_rate": 0.0005,
+                "weight_decay":0.1
+            }
         }
     ),
-    # # 13
+
     # # takes too long time, later
     # Baseline(
     #     model_name_or_path='fhamborg/roberta-targeted-sentiment-classification-newsarticles',
@@ -258,7 +277,8 @@ baseline_lst = [
     #         "early_stopping_patience": 5,
     #     }
     # ),
-    # 14
+
+    # 12
     Baseline(
         model_name_or_path='elozano/bert-base-cased-news-category',
         checkpoints_dir='bert-base-cased-news-category',
@@ -270,7 +290,7 @@ baseline_lst = [
             }
         }
     ),
-    # 15
+    # 13
     Baseline(
         model_name_or_path='mrm8488/bert-mini-finetuned-age_news-classification',
         checkpoints_dir='bert-mini-finetuned-age_news-classification',
@@ -285,7 +305,7 @@ baseline_lst = [
             },
         }
     ),
-    # 16
+    # 14
     Baseline(
         model_name_or_path='dima806/news-category-classifier-distilbert',
         checkpoints_dir='news-category-classifier-distilbert',
@@ -304,7 +324,7 @@ baseline_lst = [
             }
         }
     ),
-    # 17
+    # 15
     Baseline(
         model_name_or_path='nlptown/bert-base-multilingual-uncased-sentiment',
         checkpoints_dir='bert-base-multilingual-uncased-sentiment',
@@ -316,13 +336,13 @@ baseline_lst = [
             }
         }
     ),
-    # 18
+    # 16
     Baseline(
         model_name_or_path='Falconsai/intent_classification',
         checkpoints_dir='intent_classification',
         reference_urls = None
     ),
-    # 19
+    # 17
     Baseline(
         model_name_or_path='ahmedrachid/FinancialBERT-Sentiment-Analysis',
         checkpoints_dir='FinancialBERT-Sentiment-Analysis',
@@ -334,11 +354,22 @@ baseline_lst = [
             }
         }
     ),
-    # 20
+    # 18
     Baseline(
         model_name_or_path='finiteautomata/bertweet-base-sentiment-analysis',
         checkpoints_dir='bertweet-base-sentiment-analysis',
-        reference_urls = None
+        reference_urls = None,
+        **{
+            "args_TrainingArguments":{
+                "learning_rate": 0.01,
+                "weight_decay":0.5,
+                "seed": 644,
+                "save_steps": 200,
+                "eval_steps": 200,
+                "logging_steps": 200,
+            },
+            "early_stopping_patience": 3,
+        }
     ),
     # # 21
     # Baseline(

@@ -49,24 +49,39 @@ def finetune(channel, baseline: Baseline, isTrain=True, isTest=True, isTrainerTe
         # test
         test(model, tokenizer, test_samples, metric, **config)
 
-def compute_acc(channel):
+def compute_acc(channel, baseline_used_index_lst=[]):
     checkpoint_root = "checkpoints/baselines"
     test_samples = load_baseline_smp(
         os.path.join("data/baseline", f"min-{4}", f"{channel}_test.json")
     )
+    # dev_samples = load_baseline_smp(
+    #     os.path.join("data/baseline", f"min-{4}", f"{channel}_dev.json")
+    # )
     dataset = Dataset.from_list(test_samples)
+    # dev_dataset = Dataset.from_list(dev_samples)
 
-    for index, baseline in enumerate(baseline_lst):
-        print(f"[{index+1}/{len(baseline_lst)}]")
+    if not baseline_used_index_lst:
+        baseline_used_lst = baseline_lst
+    else:
+        baseline_used_lst = [baseline_lst[i] for i in baseline_used_index_lst]
+
+    test_lst = []
+    acc_lst = []
+    for index, baseline in enumerate(baseline_used_lst):
+        print(f"[{index+1}/{len(baseline_used_lst)}]")
         print(f"Computing accuracy of {baseline.checkpoints_dir} on channel {channel}")
         best_dir = os.path.join(checkpoint_root, baseline.checkpoints_dir, channel, "best")
         config = baseline.config4finetune(channel, device=device_setting(), min_x=4)
         tokenizer = load_baseline_tokenizer(best_dir)
         model = load_baseline_model(best_dir)
+        # tokenizer = load_baseline_tokenizer(config["model_name"])
+        # model = load_baseline_model(config["model_name"], num_labels=config["num_labels"])
+
 
         def tokenize_function(examples):
             return tokenizer(examples["text"], **config["args_tokenizer"])
         tokenized_datasets = dataset.map(tokenize_function, batched=True)
+        # dev_tokenized_datasets = dev_dataset.map(tokenize_function, batched=True)
 
         # training_args = TrainingArguments(**config["args_TrainingArguments"])
 
@@ -75,18 +90,30 @@ def compute_acc(channel):
             eval_dataset=tokenized_datasets,
         )
 
+        # trainer.evaluate(dev_tokenized_datasets)
+
         predictions = trainer.predict(test_dataset=tokenized_datasets).predictions
         labels = np.array(tokenized_datasets["label"])
         pds = np.argmax(predictions, axis=-1)
         lbs = np.argmax(labels, axis=-1)
         acc = np.sum(pds == lbs) / len(labels)
+        acc_lst.append(acc)
 
         print(f"Accuracy of {baseline.checkpoints_dir} on channel {channel}: {acc}")
-        with open(os.path.join(checkpoint_root, baseline.checkpoints_dir, channel, "acc.txt"), "w", encoding="utf-8") as f:
-            f.write(str(acc))
-        print("Accuracy saved to:", os.path.join(checkpoint_root, baseline.checkpoints_dir, channel, "acc.txt"))
-        print()
-
+    # return acc_lst
+        [sorted(enumerate(l), key=lambda x:x[1], reverse=True) for l in predictions.tolist()]
+        # [(t[0][0], t[1][0]) for t in sorted(enumerate(l), key=lambda x:x[1], reverse=True) for l in pds.tolist()]
+        # pds_lst = pds.tolist()
+        # test_lst.append([1 if e else 0 for e in pds==lbs])
+    for l in test_lst[1:]:
+        if l != test_lst[0]:
+            print("Test result NOT consistent!")
+        else:
+            print("Test result consistent!")
+        # with open(os.path.join(checkpoint_root, baseline.checkpoints_dir, channel, "acc.txt"), "w", encoding="utf-8") as f:
+        #     f.write(str(acc))
+        # print("Accuracy saved to:", os.path.join(checkpoint_root, baseline.checkpoints_dir, channel, "acc.txt"))
+        # print()
 
     # for baseline_dir in os.listdir(checkpoint_root):
     #     finetune_failed = False
@@ -171,8 +198,10 @@ def write_result2excel():
 
 if __name__ == '__main__':
     # channel = "cj"
-    # index_lst = [16, 17, 18, 19, 20]
+    # # [18, 11, 8, 10, 7]
+    # index_lst = [18]
     # failed_lst = []
+    # Acc_lst = []
     # for index in index_lst:
     #     # baseline = baseline_lst[index]
     #     # finetune(
@@ -186,23 +215,34 @@ if __name__ == '__main__':
     #         baseline = baseline_lst[index]
     #         print(f"Training {baseline.checkpoints_dir} on channel {channel}")
     #         finetune(
-    #         channel,
-    #         baseline,
-    #         isTrain=True,
-    #         isTest=True,
-    #         isTrainerTest=True
-    #     )
+    #             channel,
+    #             baseline,
+    #             isTrain=True,
+    #             isTest=True,
+    #             isTrainerTest=True
+    #         )
+    #         acc = compute_acc(channel, [index])[0]
+    #         Acc_lst.append(acc)
+    #         print(f"Accuracy: {acc}")
+    #         # print("\n\n\n\n\n")
     #     except:
     #         print(f"Failed to train {baseline.checkpoints_dir} on channel {channel}")
     #         failed_lst.append((index, baseline.checkpoints_dir))
     #         continue
+    
     # print("\n\nSummary:")
     # for failed_index, failed_model in failed_lst:
     #     print(f"Failed to train {failed_index}:{failed_model} on channel {channel}")
+    
+    # print(f"Acc_lst:\n{Acc_lst}")
 
-    # compute_acc("ty")
+    compute_acc(
+        channel="cj",
+        # baseline_used_index_lst=[18, 11, 8, 10, 7],
+        baseline_used_index_lst=[18]
+    )
 
-    write_result2excel()
+    # write_result2excel()
 
 
         
